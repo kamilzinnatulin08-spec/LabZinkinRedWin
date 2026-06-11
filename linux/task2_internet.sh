@@ -1,44 +1,64 @@
 #!/bin/bash
-# Задание 2 - Доступ в интернет (полностью автоматическая проверка)
+# Задание 2 - Доступ в интернет
 
-echo "=== ЗАДАНИЕ 2: Доступ в интернет ==="
+echo "=============================================="
+echo "ЗАДАНИЕ 2: Доступ в интернет"
+echo "=============================================="
+echo ""
 
-# 1. ISP hostname
-echo -n "1. ISP hostname: "
-[ "$(hostname)" = "isp.tattele.com" ] && echo "[OK]" || echo "[FAIL]"
+# 1. Проверка имени ISP
+echo ">>> Проверка 1: Имя хоста ISP"
+echo -n "   Ожидается: isp.tattele.com | Получено: $(hostname) -> "
+if [ "$(hostname)" = "isp.tattele.com" ]; then
+    echo "OK"
+else
+    echo "FAIL"
+fi
+echo ""
 
-# 2. IP адреса на внутренних интерфейсах
-echo "2. IP адреса:"
+# 2. Проверка IP адресов
+echo ">>> Проверка 2: IP адреса на внутренних интерфейсах"
 for iface in ens224 ens256; do
     if ip a show $iface 2>/dev/null | grep -q "inet "; then
         ip_addr=$(ip a show $iface 2>/dev/null | grep "inet " | awk '{print $2}')
-        echo "   $iface: $ip_addr [OK]"
+        echo "   Интерфейс $iface: IP $ip_addr -> OK"
     else
-        echo "   $iface: [FAIL]"
+        echo "   Интерфейс $iface: IP не назначен -> FAIL"
     fi
 done
+echo ""
 
-# 3. Включена пересылка пакетов
-echo -n "3. IP Forward: "
-[ "$(sysctl -n net.ipv4.ip_forward 2>/dev/null)" = "1" ] && echo "[OK]" || echo "[FAIL]"
+# 3. Проверка пересылки пакетов
+echo ">>> Проверка 3: Включена ли пересылка пакетов (IP Forward)"
+current_fwd=$(sysctl -n net.ipv4.ip_forward 2>/dev/null)
+echo -n "   Ожидается: 1 | Получено: $current_fwd -> "
+[ "$current_fwd" = "1" ] && echo "OK" || echo "FAIL"
+echo ""
 
-# 4. nftables и маскарадинг
-echo -n "4. nftables: "
+# 4. Проверка nftables и маскарадинга
+echo ">>> Проверка 4: nftables и маскарадинг"
 if systemctl is-active nftables 2>/dev/null | grep -q "active"; then
-    echo -n "[OK] "
+    echo -n "   Статус nftables: ЗАПУЩЕН -> OK, "
     if nft list ruleset 2>/dev/null | grep -q "masquerade"; then
-        echo "masquerade [OK]"
+        echo "Маскарадинг: НАСТРОЕН -> OK"
     else
-        echo "masquerade [FAIL]"
+        echo "Маскарадинг: НЕ НАСТРОЕН -> FAIL"
     fi
 else
-    echo "[FAIL] (не запущен)"
+    echo "   Статус nftables: НЕ ЗАПУЩЕН -> FAIL"
 fi
+echo ""
 
-# 5. Пинг до 77.88.8.8 (автоматически с текущего сервера)
-echo -n "5. Пинг 77.88.8.8: "
+# 5. Проверка пинга до DNS Яндекса
+echo ">>> Проверка 5: Доступ в интернет (пинг до 77.88.8.8)"
+echo -n "   Отправка 2 ICMP пакетов... "
 if ping -c 2 -W 3 77.88.8.8 &>/dev/null; then
-    echo "[OK]"
+    echo "Пакеты дошли -> OK"
 else
-    echo "[FAIL]"
+    echo "Пакеты не дошли -> FAIL"
 fi
+echo ""
+
+echo "=============================================="
+echo "ПРОВЕРКА ЗАВЕРШЕНА"
+echo "=============================================="
